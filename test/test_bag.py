@@ -1,14 +1,7 @@
 #!/usr/bin/env python
 import sys
-import unittest
 sys.path.append('xypath')
 import xypath
-import messytables
-try:
-    import hamcrest
-except:
-    pass
-import re
 import tcore
 
 
@@ -33,7 +26,6 @@ class Test_Bag(tcore.TCore):
 
         self.assertNotEqual(lhs, rhs)
 
-
     def test_bags_from_different_tables_are_not_equal(self):
         bag1 = self.table.filter(lambda b: True)
         bag2 = xypath.Table.from_bag(bag1)
@@ -45,15 +37,34 @@ class Test_Bag(tcore.TCore):
         self.assertEqual(265, len(bag))
         self.assertEqual(len(bag), len(list(bag)))
 
-    def test_corebag_iterator_size_squared(self):
+    def test_corebag_iterator_nonduplicate(self):
+        """
+        Ensure that each call of CoreBag.__iter__ returns a new iterator
+
+        Supercedes _test_corebag_iterator_size_squared
+        """
+
+        bag = self.table.filter('Estimates')
+        assert iter(bag) is not iter(bag)
+
+    def _test_corebag_iterator_size_squared(self):
         """Worry: that iterating twice over bag doesn't work property.
         Test: that every pair of cells from the bags is present."""
         bag = self.table.filter('Estimates')
+
+        SIZE = 4
+        # Limit bag size so that test isn't slow
+        bag = bag.from_list([cell for cell in bag][:SIZE])
+
+        n_bag = len(bag)
+        assert n_bag == SIZE
+
         count = 0
         for i in bag:
             for j in bag:
                 count = count + 1
-        self.assertEqual(count, 265*265)
+
+        self.assertEqual(count, n_bag * n_bag)
 
     def test_corebag_iterator_returns_bags(self):
         """Check the iterator returns bags, not _XYCells"""
@@ -69,8 +80,8 @@ class Test_Bag(tcore.TCore):
                           lambda: self.table.filter("Estimates").value)
 
     def test_messytables_has_properties(self):
-        for bag in self.table:
-            self.assertIsInstance(bag.properties, dict)
+        for bag in self.table.unordered:
+            bag.properties.get("jam")  # is vaguely dict-like
 
     def test_from_bag(self):
         world_pops_bag = self.table.filter(lambda b: b.y >= 16 and
@@ -89,6 +100,18 @@ class Test_Bag(tcore.TCore):
         fifties = world_pops_table.filter("1950-1955")
         filties_col = fifties.fill(xypath.DOWN)
         self.assertEqual(6, len(filties_col))
+
+    def test_fill_down_without_termination(self):
+        world_cell = self.table.filter('WORLD').assert_one()
+        filled_down = world_cell.fill(xypath.DOWN)
+        assert world_cell not in filled_down
+        self.assertEqual(264, len(filled_down))
+
+    def test_fill_right_without_termination(self):
+        world_cell = self.table.filter('WORLD').assert_one()
+        filled_right = world_cell.fill(xypath.RIGHT)
+        assert world_cell not in filled_right
+        self.assertEqual(14, len(filled_right))
 
     def test_bag_union(self):
         bag = self.table.filter('Estimates')
@@ -165,5 +188,5 @@ class Test_Bag(tcore.TCore):
         self.assertEqual(xypath.Table, type(self.table))
         self.assertIsInstance(self.table, xypath.Bag)
 
-
-
+    def test_select_other(self):
+        raise self.skipTest("select_other not tested")
