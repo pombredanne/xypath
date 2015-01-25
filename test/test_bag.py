@@ -3,7 +3,7 @@ import sys
 sys.path.append('xypath')
 import xypath
 import tcore
-
+import unittest
 
 class Test_Bag(tcore.TCore):
     def test_bag_from_list(self):
@@ -25,6 +25,14 @@ class Test_Bag(tcore.TCore):
         rhs = self.table.filter("Variant")
 
         self.assertNotEqual(lhs, rhs)
+
+    def test_bag_locations(self):
+        world=self.table.filter("WORLD")
+        empty=self.table.filter(lambda cell: False)
+
+        self.assertEqual(world.excel_locations(), "C17")
+        self.assertEqual(empty.excel_locations(), "")
+        self.assertIn(", ...", self.table.excel_locations())
 
     def test_bags_from_different_tables_are_not_equal(self):
         bag1 = self.table.filter(lambda b: True)
@@ -76,7 +84,7 @@ class Test_Bag(tcore.TCore):
         self.assertEqual(
             "Country code",
             self.table.filter("Country code").value)
-        self.assertRaises(ValueError,
+        self.assertRaises(xypath.XYPathError,
                           lambda: self.table.filter("Estimates").value)
 
     def test_messytables_has_properties(self):
@@ -112,6 +120,13 @@ class Test_Bag(tcore.TCore):
         filled_right = world_cell.fill(xypath.RIGHT)
         assert world_cell not in filled_right
         self.assertEqual(14, len(filled_right))
+
+    def test_bag_intersection(self):
+        bag = self.table.filter('Estimates')
+        another_bag = self.table.filter("WORLD")
+        union = bag | another_bag
+        intersection = union & another_bag
+        assert intersection.value == "WORLD"
 
     def test_bag_union(self):
         bag = self.table.filter('Estimates')
